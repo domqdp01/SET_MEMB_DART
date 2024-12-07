@@ -5,7 +5,8 @@ from function_needed import steering_2_steering_angle, evaluate_slip_angles, lat
 
 ### --- Import data --- ###
 # file_path = 'car_1_Datarecording_12_04_2024_13_55_13.csv'
-file_path = '100_lines.csv'
+# file_path = '100_lines.csv'
+file_path = 'circle.csv'
 
 df = pd.read_csv(file_path)
 
@@ -51,23 +52,17 @@ a_stfr, b_stfr, d_stfr, e_stfr = -0.1183, 5.9159, 0.2262, 0.7793
 
 ### --- POLYTOPIC PARAMETERS --- ###
 n = 6
-# I_n = np.eye(n)
 I_n = np.ones((6, 6), dtype=int)
 H = np.vstack([I_n, -I_n])
 
-d_up = 10
+d_up = 0.1
 h_d = np.concatenate([
     np.full((n, 1), d_up),
     np.full((n, 1), -d_up)
 ])
 
 ### --- INITIAL INSTANT --- ###
-z_0 = np.array([x[0],
-                y[0], 
-                yaw[0], 
-                vx[0], 
-                vy[0], 
-                w[0]])
+z_0 = np.array([x[0], y[0], yaw[0], vx[0], vy[0], w[0]])
 
 delta0 = steering_2_steering_angle(steering_input[0], a_s, b_s, c_s, d_s, e_s)
 alpha_f0, alpha_r0 = evaluate_slip_angles(vx[0], vy[0], w[0], lf, lr, delta0)
@@ -81,21 +76,21 @@ F_x_0_f = Cf * F_x_0
 F_x_0_r = Cr * F_x_0
 
 f_0 = np.array([
-                vx[0] * np.cos(yaw[0]) + vy[0] * np.sin(yaw[0]),
-                vx[0] * np.sin(yaw[0]) + vy[0] * np.cos(yaw[0]),
-                w[0],
-                1/m * (F_x_0_r + F_x_0_f * np.cos(delta0)) + w[0] * vy[0],
-                1/m * (F_x_0_f * np.sin(delta0)) - w[0] * vx[0],
-                lf/Jz * (F_x_0_f * np.sin(delta0))
+    vx[0] * np.cos(yaw[0]) + vy[0] * np.sin(yaw[0]),
+    vx[0] * np.sin(yaw[0]) + vy[0] * np.cos(yaw[0]),
+    w[0],
+    1/m * (F_x_0_r + F_x_0_f * np.cos(delta0)) + w[0] * vy[0],
+    1/m * (F_x_0_f * np.sin(delta0)) - w[0] * vx[0],
+    lf/Jz * (F_x_0_f * np.sin(delta0))
 ])
 
 g_0 = np.array([
-                0,
-                0,
-                0,
-                1/m * Fy_f_0 * np.sin(delta0),
-                1/m * (Fy_r_0 + Fy_f_0 * np.cos(delta0)),
-                1/Jz * (lf * Fy_f_0 * np.cos(delta0) - lr * Fy_r_0)
+    0,
+    0,
+    0,
+    1/m * Fy_f_0 * np.sin(delta0),
+    1/m * (Fy_r_0 + Fy_f_0 * np.cos(delta0)),
+    1/Jz * (lf * Fy_f_0 * np.cos(delta0) - lr * Fy_r_0)
 ])
 
 Ai_minus1 = -H @ g_0.reshape(-1, 1)
@@ -135,19 +130,22 @@ for i in range(1, len(df)):
 
     Ai = -H @ g_i.reshape(-1, 1)
     bi = h_d - H @ z_i.reshape(-1, 1) + H @ f_i.reshape(-1, 1)
+    low_bound = -10  # Valore minimo ammissibile (esempio)
+    up_bound = 10    # Valore massimo ammissibile (esempio)
 
-    A = np.vstack([Ai, Ai_minus1])
-    b = np.vstack([bi, bi_minus1])
 
-    # Linear programming solution
-    c = np.zeros(A.shape[1])
-    result = linprog(c, A_ub=A, b_ub=b, method='highs')
+    # Risolvi per l'estremo inferiore (minimizzazione)
+    c_min = np.zeros(Ai.shape[1])
+    result_min = linprog(c_min, A_ub=Ai, b_ub=bi, bounds=[(low_bound, up_bound) for _ in range(Ai.shape[1])], method='highs')
 
-    if result.success:
-        a_optimal = result.x
-        print(f"Iteration {i}, a_optimal: {a_optimal}")
+    # Risolvi per l'estremo superiore (massimizzazione)
+    c_max = -c_min  # Moltiplica la funzione obiettivo per -1
+    result_max = linprog(c_max, A_ub=Ai, b_ub=bi, bounds=[(low_bound, up_bound) for _ in range(Ai.shape[1])], method='highs')
+
+    # Estrai i risultati
+    if result_min.success and result_max.success:
+        a_optimal_min = result_min.x
+        a_optimal_max = result_max.x
+        print(f"Iteration {i}, Min: {a_optimal_min}, Max: {a_optimal_max}")
     else:
         print(f"Iteration {i}: No valid solution found")
-
-    Ai_minus1 = Ai
-    bi_minus1 = bi

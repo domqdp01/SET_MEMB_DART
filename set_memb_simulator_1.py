@@ -7,7 +7,8 @@ from function_needed import steering_2_steering_angle, evaluate_slip_angles, lat
 ### --- Import data --- ###
 
 # file_path = 'car_1_Datarecording_12_04_2024_13_55_13.csv'
-file_path = '100_lines.csv'
+# file_path = '100_lines.csv'
+file_path = 'circle.csv'
 
 df = pd.read_csv(file_path)
 

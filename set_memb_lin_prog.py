@@ -5,7 +5,8 @@ from function_needed import steering_2_steering_angle, evaluate_slip_angles, lat
 
 ### --- Import data --- ###
 # file_path = 'car_1_Datarecording_12_04_2024_13_55_13.csv'
-file_path = '100_lines.csv'
+# file_path = '100_lines.csv'
+file_path = 'circle_fin.csv'
 
 df = pd.read_csv(file_path)
 
@@ -54,7 +55,7 @@ n = 6
 I_n = np.ones((6, 6), dtype=int)
 H = np.vstack([I_n, -I_n])
 
-d_up = 10
+d_up = 50
 h_d = np.concatenate([
     np.full((n, 1), d_up),
     np.full((n, 1), -d_up)
@@ -135,7 +136,9 @@ for i in range(1, len(df)):
     result = linprog(c, A_ub=Ai, b_ub=bi, method='highs')
 
     if result.success:
-        a_optimal = result.x
-        print(f"Iteration {i}, a_optimal: {a_optimal}")
+        mu_optimal = result.x
+        print(f"Iteration {i}, mu_optimal: {mu_optimal}")
     else:
         print(f"Iteration {i}: No valid solution found")
+
+
