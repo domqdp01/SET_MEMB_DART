@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import linprog
-from function_needed import steering_2_steering_angle, evaluate_slip_angles, lateral_tire_force, rolling_friction, motor_force, F_friction_due_to_steering
+from function_needed import steer_angle, evaluate_slip_angles, lateral_tire_force, rolling_friction, motor_force, F_friction_due_to_steering
 
 ### --- Import data --- ###
 # file_path = 'car_1_Datarecording_12_04_2024_13_55_13.csv'
@@ -64,7 +64,7 @@ h_d = np.concatenate([
 ### --- INITIAL INSTANT --- ###
 z_0 = np.array([x[0], y[0], yaw[0], vx[0], vy[0], w[0]])
 
-delta0 = steering_2_steering_angle(steering_input[0], a_s, b_s, c_s, d_s, e_s)
+delta0 = steer_angle(steering_input[0])
 alpha_f0, alpha_r0 = evaluate_slip_angles(vx[0], vy[0], w[0], lf, lr, delta0)
 Fy_f_0 = lateral_tire_force(alpha_f0, d_t_f, c_t_f, b_t_f, m_front_wheel)
 Fy_r_0 = lateral_tire_force(alpha_r0, d_t_r, c_t_r, b_t_r, m_rear_wheel)
@@ -99,7 +99,7 @@ bi_minus1 = h_d - H @ z_0.reshape(-1, 1) + H @ f_0.reshape(-1, 1)
 ### --- SME ALGORITHM --- ###
 for i in range(1, len(df)):
     z_i = np.array([x[i], y[i], yaw[i], vx[i], vy[i], w[i]])
-    deltai = steering_2_steering_angle(steering_input[i], a_s, b_s, c_s, d_s, e_s)
+    deltai = steer_angle(steering_input[i])
     alpha_fi, alpha_ri = evaluate_slip_angles(vx[i], vy[i], w[i], lf, lr, deltai)
     Fy_f_i = lateral_tire_force(alpha_fi, d_t_f, c_t_f, b_t_f, m_front_wheel)
     Fy_r_i = lateral_tire_force(alpha_ri, d_t_r, c_t_r, b_t_r, m_rear_wheel)
@@ -128,24 +128,29 @@ for i in range(1, len(df)):
         1/Jz * (lf * Fy_f_i * np.cos(deltai) - lr * Fy_r_i)
     ])
 
-    Ai = -H @ g_i.reshape(-1, 1)
-    bi = h_d - H @ z_i.reshape(-1, 1) + H @ f_i.reshape(-1, 1)
-    low_bound = -10  # Valore minimo ammissibile (esempio)
-    up_bound = 10    # Valore massimo ammissibile (esempio)
+    # Variante 1
+    Ai_1 = -H @ g_i.reshape(-1, 1)
+    bi_1 = h_d - H @ z_i.reshape(-1, 1) + H @ f_i.reshape(-1, 1)
 
+    # Variante 2
+    Ai_2 = -H @ g_i.reshape(-1, 1)
+    bi_2 = h_d - H @ z_i.reshape(-1, 1) - H @ f_i.reshape(-1, 1)
 
-    # Risolvi per l'estremo inferiore (minimizzazione)
-    c_min = np.zeros(Ai.shape[1])
-    result_min = linprog(c_min, A_ub=Ai, b_ub=bi, bounds=[(low_bound, up_bound) for _ in range(Ai.shape[1])], method='highs')
+    # Linear programming solution for Variante 1
+    c = np.zeros(Ai_1.shape[1])
+    result_1 = linprog(c, A_ub=Ai_1, b_ub=bi_1, method='highs')
 
-    # Risolvi per l'estremo superiore (massimizzazione)
-    c_max = -c_min  # Moltiplica la funzione obiettivo per -1
-    result_max = linprog(c_max, A_ub=Ai, b_ub=bi, bounds=[(low_bound, up_bound) for _ in range(Ai.shape[1])], method='highs')
+    # Linear programming solution for Variante 2
+    result_2 = linprog(c, A_ub=Ai_2, b_ub=bi_2, method='highs')
 
-    # Estrai i risultati
-    if result_min.success and result_max.success:
-        a_optimal_min = result_min.x
-        a_optimal_max = result_max.x
-        print(f"Iteration {i}, Min: {a_optimal_min}, Max: {a_optimal_max}")
+    if result_1.success:
+        mu_optimal_1 = result_1.x
+        print(f"Iteration {i}, Solution 1, mu_optimal: {mu_optimal_1}")
     else:
-        print(f"Iteration {i}: No valid solution found")
+        print(f"Iteration {i}, Solution 1: No valid solution found")
+
+    if result_2.success:
+        mu_optimal_2 = result_2.x
+        print(f"Iteration {i}, Solution 2, mu_optimal: {mu_optimal_2}")
+    else:
+        print(f"Iteration {i}, Solution 2: No valid solution found")

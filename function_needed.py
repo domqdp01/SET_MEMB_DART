@@ -1,12 +1,20 @@
 import numpy as np
 
 # Function to transform steering input into steering angle
-def steering_2_steering_angle(steering_command, a_s, b_s, c_s, d_s, e_s):
-    w_s = 0.5 * (np.tanh(30 * (steering_command + c_s)) + 1)  # Weighting function
-    steering_angle1 = b_s * np.tanh(a_s * (steering_command + c_s))  # First curve
-    steering_angle2 = d_s * np.tanh(e_s * (steering_command + c_s))  # Second curve
-    steering_angle = w_s * steering_angle1 + (1 - w_s) * steering_angle2
+def steer_angle(steering_command):
+    a =  1.6379064321517944
+    b =  0.3301370143890381
+    c =  0.019644200801849365
+    d =  0.37879398465156555
+    e =  1.6578725576400757
+
+    w = 0.5 * (np.tanh(30*(steering_command+c))+1)
+    steering_angle1 = b * np.tanh(a * (steering_command + c)) 
+    steering_angle2 = d * np.tanh(e * (steering_command + c))
+    steering_angle = (w)*steering_angle1+(1-w)*steering_angle2 
+
     return steering_angle
+
 
 # Function to evaluate slip angles for front and rear wheels
 def evaluate_slip_angles(vx, vy, w, lf, lr, steer_angle):

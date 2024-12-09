@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import linprog
-from function_needed import steering_2_steering_angle, evaluate_slip_angles, lateral_tire_force, rolling_friction, motor_force, F_friction_due_to_steering
+from function_needed import  steer_angle, evaluate_slip_angles, lateral_tire_force, rolling_friction, motor_force, F_friction_due_to_steering
 
 ### --- Import data --- ###
 # file_path = 'car_1_Datarecording_12_04_2024_13_55_13.csv'
@@ -52,19 +52,20 @@ a_stfr, b_stfr, d_stfr, e_stfr = -0.1183, 5.9159, 0.2262, 0.7793
 
 ### --- POLYTOPIC PARAMETERS --- ###
 n = 6
-I_n = np.ones((6, 6), dtype=int)
+I_n = np.eye(6, dtype=int)
 H = np.vstack([I_n, -I_n])
 
-d_up = 50
+d_up = 0.5
+d_low = d_up
 h_d = np.concatenate([
     np.full((n, 1), d_up),
-    np.full((n, 1), -d_up)
+    np.full((n, 1), -d_low)
 ])
 
 ### --- INITIAL INSTANT --- ###
 z_0 = np.array([x[0], y[0], yaw[0], vx[0], vy[0], w[0]])
 
-delta0 = steering_2_steering_angle(steering_input[0], a_s, b_s, c_s, d_s, e_s)
+delta0 = steer_angle(steering_input[0])
 alpha_f0, alpha_r0 = evaluate_slip_angles(vx[0], vy[0], w[0], lf, lr, delta0)
 Fy_f_0 = lateral_tire_force(alpha_f0, d_t_f, c_t_f, b_t_f, m_front_wheel)
 Fy_r_0 = lateral_tire_force(alpha_r0, d_t_r, c_t_r, b_t_r, m_rear_wheel)
@@ -76,7 +77,7 @@ F_x_0_f = Cf * F_x_0
 F_x_0_r = Cr * F_x_0
 
 f_0 = np.array([
-    vx[0] * np.cos(yaw[0]) + vy[0] * np.sin(yaw[0]),
+    vx[0] * np.cos(yaw[0]) - vy[0] * np.sin(yaw[0]),
     vx[0] * np.sin(yaw[0]) + vy[0] * np.cos(yaw[0]),
     w[0],
     1/m * (F_x_0_r + F_x_0_f * np.cos(delta0)) + w[0] * vy[0],
@@ -88,7 +89,7 @@ g_0 = np.array([
     0,
     0,
     0,
-    1/m * Fy_f_0 * np.sin(delta0),
+    -1/m * Fy_f_0 * np.sin(delta0),
     1/m * (Fy_r_0 + Fy_f_0 * np.cos(delta0)),
     1/Jz * (lf * Fy_f_0 * np.cos(delta0) - lr * Fy_r_0)
 ])
@@ -97,9 +98,10 @@ Ai_minus1 = -H @ g_0.reshape(-1, 1)
 bi_minus1 = h_d - H @ z_0.reshape(-1, 1) + H @ f_0.reshape(-1, 1)
 
 ### --- SME ALGORITHM --- ###
-for i in range(1, len(df)):
+for i in range (1, 101):
+# for i in range(1, len(df)):
     z_i = np.array([x[i], y[i], yaw[i], vx[i], vy[i], w[i]])
-    deltai = steering_2_steering_angle(steering_input[i], a_s, b_s, c_s, d_s, e_s)
+    deltai = steer_angle(steering_input[i])
     alpha_fi, alpha_ri = evaluate_slip_angles(vx[i], vy[i], w[i], lf, lr, deltai)
     Fy_f_i = lateral_tire_force(alpha_fi, d_t_f, c_t_f, b_t_f, m_front_wheel)
     Fy_r_i = lateral_tire_force(alpha_ri, d_t_r, c_t_r, b_t_r, m_rear_wheel)
@@ -111,7 +113,7 @@ for i in range(1, len(df)):
     F_x_i_r = Cr * F_x_i
 
     f_i = np.array([
-        vx[i] * np.cos(yaw[i]) + vy[i] * np.sin(yaw[i]),
+        vx[i] * np.cos(yaw[i]) - vy[i] * np.sin(yaw[i]),
         vx[i] * np.sin(yaw[i]) + vy[i] * np.cos(yaw[i]),
         w[i],
         1/m * (F_x_i_r + F_x_i_f * np.cos(deltai)) + w[i] * vy[i],
@@ -123,7 +125,7 @@ for i in range(1, len(df)):
         0,
         0,
         0,
-        1/m * Fy_f_i * np.sin(deltai),
+        -1/m * Fy_f_i * np.sin(deltai),
         1/m * (Fy_r_i + Fy_f_i * np.cos(deltai)),
         1/Jz * (lf * Fy_f_i * np.cos(deltai) - lr * Fy_r_i)
     ])
@@ -131,9 +133,14 @@ for i in range(1, len(df)):
     Ai = -H @ g_i.reshape(-1, 1)
     bi = h_d - H @ z_i.reshape(-1, 1) + H @ f_i.reshape(-1, 1)
 
+    A = np.concatenate([Ai, Ai_minus1])
+    b = np.concatenate([bi, bi_minus1])
+
+    # print(b.shape)
+
     # Linear programming solution
-    c = np.zeros(Ai.shape[1])
-    result = linprog(c, A_ub=Ai, b_ub=bi, method='highs')
+    c = np.zeros(A.shape[1])
+    result = linprog(c, A_ub=A, b_ub=b, method='highs')
 
     if result.success:
         mu_optimal = result.x
@@ -141,4 +148,6 @@ for i in range(1, len(df)):
     else:
         print(f"Iteration {i}: No valid solution found")
 
+    Ai_minus1 = Ai
+    bi_minus1 = bi
 
