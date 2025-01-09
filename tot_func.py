@@ -2707,3 +2707,5 @@ def RBF_kernel_rewritten(x,y,outputscale,lengthscale):
     for i in range(len(lengthscale)):
         exp_arg[i] = (x[i]-y[i])**2/lengthscale[i]**2
     return outputscale * np.exp(-0.5*np.sum(exp_arg))
+
+
