@@ -12,12 +12,6 @@ def continuous_matrices(index, steering_input, vx, vy, w, tau):
     vy (array): Lateral velocity at each time step.
     w (array): Angular velocity at each time step.
     tau (array): Motor torque at each time step.
-    Cf (float): Front cornering stiffness coefficient.
-    Cr (float): Rear cornering stiffness coefficient.
-    m (float): Vehicle mass.
-    Jz (float): Vehicle moment of inertia about the z-axis.
-    lf (float): Distance from the center of gravity to the front axle.
-    lr (float): Distance from the center of gravity to the rear axle.
 
     Returns:
     tuple: F_0 and G_0 matrices as numpy arrays.

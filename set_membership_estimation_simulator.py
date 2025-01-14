@@ -123,7 +123,8 @@ def remove_duplicates(values, epsilon=1e-6):
 
 ### --- SME ALGORITHM --- ###
 
-for i in range(900, len(df)):
+# for i in range(900, len(df)):
+for i in range(900, 920):
 
     # STATE VECTOR
     z_i = np.array([[vx[i]], [vy[i]], [w[i]]])
@@ -208,7 +209,7 @@ for i in range(900, len(df)):
     if valid_A and valid_b:  # Only update if valid values exist
         Ai_minus1 = np.vstack(valid_A)  # Stack all valid A
         bi_minus1 = np.vstack(valid_b)  # Stack all valid b
-
+    
     #     ### METHOD 2: GLPK library ###
 
     # c = np.zeros((A.shape[1], 1))  # Objective function coefficients
