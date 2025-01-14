@@ -14,15 +14,17 @@ from sympy import symbols, Matrix,And, solve, reduce_inequalities, simplify
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_12_18_2024_14_43_23.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_12_18_2024_14_52_47.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_14_35_50.csv'  # noise_up = 0.05
-# file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_14_39_57.csv'  # noise_up = 0.5
+file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_14_39_57.csv'  # noise_up = 0.5
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_14_50_47.csv'  # noise_up = 1
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_17_07_52.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_17_12_50.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_16_41_15.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_16_58_58.csv' # unifrom noise
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_04_25.csv'
-file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_10_42.csv' # uniform nosi not centered
+# file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_10_42.csv' # uniform nosi not centered
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_13_40.csv'
+# file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_12_16_2024_16_59_04.csv'
+
 
 df = pd.read_csv(file_path)
 
@@ -53,7 +55,7 @@ n_state = 3                       # number of states
 I_n = np.eye(n_state, dtype=int)  # dim (3,3)
 H = np.vstack([I_n, -I_n])        # dim (6,3)
 
-d_up = 0.02                  # noise upper bound
+d_up = 0.02                 # noise upper bound
 d_low = - d_up                    # noise lower bound
 h_d = np.concatenate([
     np.full((n_state, 1), d_up),
@@ -171,6 +173,7 @@ for index in range(starting_instant, len(df)):
     valid_mu = np.sort(valid_mu)
   
     print(f"Iteration: {index}: mu ∈ [{valid_mu[0]:.4f}, {valid_mu[1]:.4f}] ")
+    # print(valid_mu)
     # A_i_minus2 = []
     # b_i_minus2 = []
     # Update Ai_minus1 and bi_minus1 with the valid values for the next iteration
@@ -179,10 +182,10 @@ for index in range(starting_instant, len(df)):
         A_i_minus2 = np.vstack(valid_A)  # Stack all valid A
         b_i_minus2 = np.vstack(valid_b)  # Stack all valid b
     
-    # valid_A = remove_duplicates(valid_A, epsilon=1e-1)
-    # valid_b = remove_duplicates(valid_b, epsilon=1e-1)
-    # A_i_minus2 = remove_duplicates(valid_A, epsilon=1e-1)
-    # b_i_minus2 = remove_duplicates(valid_b, epsilon=1e-1)
+    valid_A = remove_duplicates(valid_A, epsilon=1e-1)
+    valid_b = remove_duplicates(valid_b, epsilon=1e-1)
+    A_i_minus2 = remove_duplicates(valid_A, epsilon=1e-1)
+    b_i_minus2 = remove_duplicates(valid_b, epsilon=1e-1)
     
     # ### --- SOLUTION TYPE 2 --- ###
     # # Another type of solution (MUCH SLOWER)    

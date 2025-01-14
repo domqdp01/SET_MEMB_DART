@@ -25,6 +25,7 @@ file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_04_25.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_10_42.csv' # uniform nosi not centered
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_13_40.csv'
+
 df = pd.read_csv(file_path)
 
 # Load data
@@ -193,7 +194,7 @@ for index in range(starting_instant, len(df)):
     for idx, mu in enumerate(mu_values.flatten()):
         satisfy_all = True
         for j in range(len(A)):
-            if not (A[j] * mu <= b[j] + 1e-6):
+            if not (A[j] * mu <= b[j]):
                 satisfy_all = False
                 break
         
@@ -287,7 +288,7 @@ for index in range(starting_instant, len(df)):
 
     plt.pause(0.001)
 
-    print(mu_i)
+    # print(mu_i)
 
     # ### --- SOLUTION TYPE 2 --- ###
     # # Another type of solution (MUCH SLOWER)    
