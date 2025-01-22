@@ -199,3 +199,6 @@ for index in range(starting_instant, len(df)):
     # # print("valid_b:")
     # # print(valid_b)
     # print("###########################\n")
+
+
+#### PROVA CHE é ANDATO a BUON FINE
