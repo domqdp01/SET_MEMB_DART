@@ -19,13 +19,13 @@ from function_for_parameter_estimation import solve_constrained_QP, compute_vert
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_14_50_47.csv'  # noise_up = 1
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_17_07_52.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_10_2025_17_12_50.csv'
-file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_10_47_21.csv'  ### TOP
+# file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_10_47_21.csv'  ### TOP
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_16_41_15.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_16_58_58.csv' # unifrom noise
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_04_25.csv'
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_10_42.csv' # uniform nosi not centered
 # file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_13_2025_17_13_40.csv'
-
+file_path = '/home/domenico/DART_QDP/src/racecar_pkg/DATA/car_1_Datarecording_01_20_2025_10_46_12.csv'
 df = pd.read_csv(file_path)
 
 # Load data
@@ -86,7 +86,7 @@ def solve_sys(A, b):
 plt.ion()  # Enable interactive mode
 fig, ax = plt.subplots(figsize=(12, 8))  # Adjust figure size
 ax.set_xlim()
-ax.set_ylim(0.70, 1.2)
+ax.set_ylim(0.6, 1.4)
 ax.set_title("")
 ax.set_xlabel("")
 ax.set_xticks([])
@@ -113,8 +113,9 @@ observation = []
 Hp = []
 hp = []
 
-starting_instant = 3
-for index in range(starting_instant, len(df)):
+starting_instant = 35
+ending_instant = len(df)
+for index in range(starting_instant, ending_instant):
 # for index in range(starting_instant, starting_instant + 10):
 
     # FILLED PART IN THE PLOT
@@ -152,12 +153,8 @@ for index in range(starting_instant, len(df)):
     # Maps in discrete time
     f_dicr_minus_2, g_discr_minus_2, state_discr_minus_2 = compute_discrete_function_terms_single_step_euler(x_cont_minus_2, u_cont_minus_2, autonomous_func_minus_2, input_func_minus_2)
     f_dicr_minus_1, g_discr_minus_1, state_discr_minus_1 = compute_discrete_function_terms_single_step_euler(x_cont_minus_1, u_cont_minus_1, autonomous_func_minus_1, input_func_minus_1)
-    
-    # error = np.abs(state_discr_minus_1) - np.abs(x_cont_minus_1)
-    # error_vx.append(error[0, 0])  # Error fro longitudinal velocity
-    # error_vy.append(error[1, 0])  # Error for lateral velocity
-    # error_w.append(error[2, 0])   # Error for angolar velocity
-
+        
+  
     ## The inequality to solve is: - H * G * mu <= h_d - H * x_discr + H * F
     ## Grouping the terms: A = - H * G and b = h_d - H * x_discr + H * F
     ## Finally:  A * mu <= b
@@ -194,7 +191,7 @@ for index in range(starting_instant, len(df)):
     for idx, mu in enumerate(mu_values.flatten()):
         satisfy_all = True
         for j in range(len(A)):
-            if not (A[j] * mu <= b[j]):
+            if not (A[j] * mu <= b[j] + 1e-6):
                 satisfy_all = False
                 break
         
@@ -205,8 +202,11 @@ for index in range(starting_instant, len(df)):
     
     valid_mu = remove_duplicates(valid_mu, epsilon=1e-4)   # This removes values similar to each other
     valid_mu = np.sort(valid_mu)
-  
-    print(f"Iteration: {index}: mu ∈ [{valid_mu[0]:.4f}, {valid_mu[1]:.4f}] ")
+    if valid_mu.shape == 2:
+        print(f"Iteration: {index}: mu ∈ [{valid_mu[0]:.4f}, {valid_mu[1]:.4f}] ")
+    else:
+        print(f"Iteration: {index}: mu = {valid_mu}")
+    
     A_i_minus2 = []
     b_i_minus2 = []
     # Update Ai_minus1 and bi_minus1 with the valid values for the next iteration
@@ -261,7 +261,7 @@ for index in range(starting_instant, len(df)):
     # print("Hp:", Hp)
     # print("hp:", hp)
     mu_hat = solve_constrained_QP(np.array(regressor), np.array(observation), np.array(Hp), np.array(hp))
-    print(f"mu estimated = {mu_hat}")
+    # print(f"mu estimated = {mu_hat}")
     
     x_vals = np.linspace(0, 1, 10)
 
@@ -269,13 +269,13 @@ for index in range(starting_instant, len(df)):
     mu_low = valid_mu[0]
     line_up = mu_up * np.ones(10)
     line_low = mu_low * np.ones(10)
-    fill_valid_mu = ax.fill_between(x_vals, line_low, line_up, alpha= 0.75, color='green')
+    fill_valid_mu = ax.fill_between(x_vals, line_low, line_up, alpha= 0.9, color='green')
 
     mu_i_up = mu_i[3]
     mu_i_low = mu_i[2]
     line_up_i = mu_i_up * np.ones(10)
     line_low_i = mu_i_low * np.ones(10)
-    fill_mu_i = ax.fill_between(x_vals, line_low_i, line_up_i, alpha=0.25, color='blue')
+    fill_mu_i = ax.fill_between(x_vals, line_low_i, line_up_i, alpha=0.2, color='blue')
     
     if line_mu_hat:
         line_mu_hat.remove()
@@ -311,20 +311,4 @@ for index in range(starting_instant, len(df)):
 
 plt.ioff()
 plt.show()
-
-
-
-
-### --- ERROR EVALUATION --- ###
-
-# average_error_vx = np.mean(error_vx)
-# max_error_vx = np.max(error_vx)
-# average_error_vy = np.mean(error_vy)
-# max_error_vy = np.max(error_vy)
-# average_error_w = np.mean(error_w)
-# max_error_w = np.max(error_w)
-
-# print(f"Average error for vx: {average_error_vx}, max error for vx: {max_error_vx}")
-# print(f"Average error for vy: {average_error_vy}, max error for vy: {max_error_vy}")
-# print(f"Average error for w: {average_error_w}, max error for w: {max_error_w}")
 

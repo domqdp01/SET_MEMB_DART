@@ -13,8 +13,6 @@ def compute_discrete_function_terms_single_step_euler(
     Args:
         previous_state_measurement (np.ndarray): Previous state (x_k-1).
         previous_control_input (np.ndarray): Previous control input (u_k-1).
-        controller_timestep (float): Controller timestep (ΔT_c).
-        integration_timestep (float): Integration timestep (ΔT_i).
         autonomous_function: Function f(x) for the autonomous map.
         input_function: Function g(u) for the input map.
 

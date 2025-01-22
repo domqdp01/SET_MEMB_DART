@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import PillowWriter, FFMpegWriter
 import os
 from datetime import datetime
+from function_for_parameter_estimation import solve_constrained_QP, compute_vertex_centroid
 ### --- IMPORT AND LOADING DATA IN 'CONTINUOUS TIME' --- ###
 
 
@@ -94,6 +95,8 @@ lines_valid_a = [ax.plot([], [], label=f"valid_a[{j}]", color="green", linestyle
 
 fill_mu_i = None
 fill_valid_mu = None
+line_mu_hat = None
+
 
 # Add legend entries for the areas
 area_handles = [
@@ -109,6 +112,12 @@ os.makedirs(output_dir, exist_ok=True)
 file_name = os.path.join(output_dir, f"SET_SIMULATOR_DISCRETE_{current_time}.mp4")
 
 writer = FFMpegWriter(fps=15)
+
+regressor = []
+observation = []
+Hp = []
+hp = []
+
 
 starting_instant = 3
 ending_instant = 500
@@ -151,11 +160,7 @@ with writer.saving(fig, file_name, dpi=50):
         f_dicr_minus_2, g_discr_minus_2, state_discr_minus_2 = compute_discrete_function_terms_single_step_euler(x_cont_minus_2, u_cont_minus_2, autonomous_func_minus_2, input_func_minus_2)
         f_dicr_minus_1, g_discr_minus_1, state_discr_minus_1 = compute_discrete_function_terms_single_step_euler(x_cont_minus_1, u_cont_minus_1, autonomous_func_minus_1, input_func_minus_1)
         
-        # error = np.abs(state_discr_minus_1) - np.abs(x_cont_minus_1)
-        # error_vx.append(error[0, 0])  # Error fro longitudinal velocity
-        # error_vy.append(error[1, 0])  # Error for lateral velocity
-        # error_w.append(error[2, 0])   # Error for angolar velocity
-
+  
         ## The inequality to solve is: - H * G * mu <= h_d - H * x_discr + H * F
         ## Grouping the terms: A = - H * G and b = h_d - H * x_discr + H * F
         ## Finally:  A * mu <= b
@@ -217,7 +222,50 @@ with writer.saving(fig, file_name, dpi=50):
         valid_b = remove_duplicates(valid_b, epsilon=1e-1)
         A_i_minus2 = remove_duplicates(valid_A, epsilon=1e-1)
         b_i_minus2 = remove_duplicates(valid_b, epsilon=1e-1)
-        
+
+        ### ========================================== ###
+        ###         PARAMETER ESIMATION      Θ^        ###
+        ### ========================================== ###
+
+        vertices = [valid_mu[0], valid_mu[1]]
+        # print(vertices)
+
+        centroid = compute_vertex_centroid(vertices)
+        # print(centroid)
+
+        N = 24 # window of data
+
+
+        if len(regressor) < N:
+            for i in range(len(A_i_minus1)):
+                regressor.append(A_i_minus1[i])
+                observation.append(b_i_minus1[i])
+
+        else:
+            for i in range(len(A_i_minus1)):
+                regressor.append(A_i_minus1[i])
+                observation.append(b_i_minus1[i])
+            regressor = regressor[6:]
+            observation = observation[6:]
+
+
+        if len(Hp) < N:
+            for i in range(len(A_i_minus2)):
+                Hp.append(A_i_minus2[i])
+                hp.append(b_i_minus2[i])
+        else:
+            for i in range(len(A_i_minus2)):
+                Hp.append(A_i_minus2[i])
+                hp.append(b_i_minus2[i])
+            Hp = Hp[6:]
+            hp = hp[6:]   
+        # print("Regressor:", regressor)
+        # print("Observation:", observation)
+        # print("Hp:", Hp)
+        # print("hp:", hp)
+        mu_hat = solve_constrained_QP(np.array(regressor), np.array(observation), np.array(Hp), np.array(hp))
+        # print(f"mu estimated = {mu_hat}")
+            
         x_vals = np.linspace(0, 1, 10)
 
         mu_up = valid_mu[1]
@@ -232,7 +280,13 @@ with writer.saving(fig, file_name, dpi=50):
         line_low_i = mu_i_low * np.ones(10)
         fill_mu_i = ax.fill_between(x_vals, line_low_i, line_up_i, alpha=0.2, color='blue')
 
+        if line_mu_hat:
+            line_mu_hat.remove()
+
+        line_mu_hat = ax.axhline(mu_hat, color='red', linestyle='--', linewidth=1.5, label=r"$\mu_{\mathrm{estimated}}$")
+
         ax.set_title(f"$μ \\; \\in \\; [{mu_low:.3f}, {mu_up:.3f}]$\n"
+                    f"$\\hat{{\\mu}} = {mu_hat.item():.3f}$\n"
                     f"Iteration number: {index}")
 
         # plt.pause(0.001)
@@ -252,21 +306,4 @@ with writer.saving(fig, file_name, dpi=50):
         # print("###########################\n")
 
 plt.ioff()
-
-
-
-
-
-### --- ERROR EVALUATION --- ###
-
-# average_error_vx = np.mean(error_vx)
-# max_error_vx = np.max(error_vx)
-# average_error_vy = np.mean(error_vy)
-# max_error_vy = np.max(error_vy)
-# average_error_w = np.mean(error_w)
-# max_error_w = np.max(error_w)
-
-# print(f"Average error for vx: {average_error_vx}, max error for vx: {max_error_vx}")
-# print(f"Average error for vy: {average_error_vy}, max error for vy: {max_error_vy}")
-# print(f"Average error for w: {average_error_w}, max error for w: {max_error_w}")
 

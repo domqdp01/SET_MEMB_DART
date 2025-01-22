@@ -36,17 +36,20 @@ def steer_angle(steering_command):
 
 
 # Function to calculate rolling friction
-def rolling_friction(vx):
-    a_f, b_f, c_f, d_f = 1.266, 7.666, 0.739, -0.1123
-    F_rolling = - (a_f * np.tanh(b_f * vx) + c_f * vx + d_f * vx**2)
-    return F_rolling
+def motor_force(th,v):
+    a =  28.887779235839844
+    b =  5.986172199249268
+    c =  -0.15045104920864105
+    w = 0.5 * (np.tanh(100*(th+c))+1)
+    Fm =  (a - v * b) * w * (th+c)
+    return Fm
 
-# Function to calculate motor force
-def motor_force(throttle_filtered, v):
-    a_m, b_m, c_m = 25.3585, 4.8153, -0.1638
-    w_m = 0.5 * (np.tanh(100 * (throttle_filtered + c_m)) + 1)  # Weighting function
-    Fx = (a_m - b_m * v) * w_m * (throttle_filtered + c_m)
-    return Fx
+def rolling_friction(v):
+    a =  1.7194761037826538
+    b =  13.312559127807617
+    c =  0.289848655462265
+    Ff = - a * np.tanh(b  * v) - v * c
+    return Ff
 
 # def motor_force(th,v):
 #     a =  28.887779235839844
@@ -89,21 +92,6 @@ def slip_angles(vx,vy,w,steering_angle):
     alpha_f = -( -steering_angle + np.arctan2(Vy_wheel_f, Vx_wheel_f)) / np.pi * 180  #converting alpha into degrees
     return alpha_f, alpha_r
 
-def lateral_tire_forces(alpha_f,alpha_r):
-    #front tire Pacejka tire model
-    d =  2.9751534461975098
-    c =  0.6866822242736816
-    b =  0.29280123114585876
-    e =  -3.0720443725585938
-    #rear tire linear model
-    d_t_r, c_t_r, b_t_r = -0.8547, 0.9591, 11.5493
-
-    F_y_f = d * np.sin(c * np.arctan(b * alpha_f - e * (b * alpha_f -np.arctan(b * alpha_f))))
-    F_y_r = d_t_r * np.sin(c_t_r * np.arctan(b_t_r * alpha_r ))
-    return F_y_f, F_y_r
-
-
-
 # def lateral_tire_forces(alpha_f,alpha_r):
 #     #front tire Pacejka tire model
 #     d =  2.9751534461975098
@@ -111,11 +99,29 @@ def lateral_tire_forces(alpha_f,alpha_r):
 #     b =  0.29280123114585876
 #     e =  -3.0720443725585938
 #     #rear tire linear model
+#     d_t_r, c_t_r, b_t_r = -0.8547, 0.9591, 11.5493
 #     c_r = 0.38921865820884705
 
 #     F_y_f = d * np.sin(c * np.arctan(b * alpha_f - e * (b * alpha_f -np.arctan(b * alpha_f))))
+#     # F_y_r = d_t_r * np.sin(c_t_r * np.arctan(b_t_r * alpha_r ))
 #     F_y_r = c_r * alpha_r
 #     return F_y_f, F_y_r
+
+
+
+def lateral_tire_forces(alpha_f,alpha_r):
+    #front tire Pacejka tire model
+    d =  2.9751534461975098
+    c =  0.6866822242736816
+    b =  0.29280123114585876
+    e =  -3.0720443725585938
+    #rear tire linear model
+    c_r = 0.38921865820884705
+
+
+    F_y_f = d * np.sin(c * np.arctan(b * alpha_f - e * (b * alpha_f -np.arctan(b * alpha_f))))
+    F_y_r = c_r * alpha_r
+    return F_y_f, F_y_r
 
 
 
